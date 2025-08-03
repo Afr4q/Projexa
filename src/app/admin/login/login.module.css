@@ -1,0 +1,166 @@
+.bg {
+  min-height: 100vh;
+  background: #23272f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardSingle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 340px;
+  background: #fff;
+  border-radius: 36px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  padding: 40px 48px;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 320px;
+  max-width: 340px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.headerCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.header p {
+  color: #555;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input {
+  color: #111;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #f9fafb;
+  outline: none;
+  transition: border 0.2s;
+}
+
+.input:focus {
+  border-color: #2563eb;
+}
+
+.options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.forgot {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.button {
+  margin-top: 8px;
+  padding: 12px 0;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.button:hover {
+  background: #1746a2;
+}
+
+.or {
+  text-align: center;
+  color: #aaa;
+  margin: 12px 0 0 0;
+  font-size: 0.95rem;
+}
+
+.socials {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.social {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.social:hover {
+  background: #e5e7eb;
+}
+
+.socialApple svg {
+  color: #111;
+}
+.socialGoogle svg {
+  color: #EA4335;
+}
+.socialFacebook svg {
+  color: #1877F3;
+}
+
+.headingBlack {
+  color: #23272f;
+}
+.iconLightBlack {
+  color: #23272f;
+} 

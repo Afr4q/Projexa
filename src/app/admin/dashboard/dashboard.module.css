@@ -1,0 +1,56 @@
+.bg {
+  min-height: 100vh;
+  background: #23272f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardSingle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 340px;
+  background: #fff;
+  border-radius: 36px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  padding: 48px 56px;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 320px;
+  max-width: 340px;
+  gap: 20px;
+  align-items: center;
+}
+
+.headingBlack {
+  color: #23272f;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.button {
+  width: 100%;
+  margin: 8px 0;
+  padding: 14px 0;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+}
+
+.button:hover {
+  background: #1746a2;
+  transform: translateY(-2px) scale(1.03);
+} 
