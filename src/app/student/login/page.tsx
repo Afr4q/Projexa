@@ -4,6 +4,7 @@ import { FaApple, FaGoogle, FaFacebook } from "react-icons/fa";
 import { useState } from "react";
 import { supabase } from "../../supabaseClient";
 import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function StudentLogin() {
   const [id, setId] = useState("");
@@ -14,23 +15,30 @@ export default function StudentLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Check id and password in students table
+    // Query the users table for matching user_id, password, and student role
     const { data, error } = await supabase
-      .from("students")
-      .select("id, password")
-      .eq("id", id)
+      .from("users")
+      .select("uid, name, password, email, role")
+      .eq("uid", id)
       .eq("password", password)
+      .eq("role", "student")
       .single();
     setLoading(false);
     if (error || !data) {
       alert("Login failed");
     } else {
+      // Store user info in localStorage for session management
+      localStorage.setItem('user', JSON.stringify({
+        id: id,
+        role: 'student'
+      }));
       router.push("/student/welcome");
     }
   };
 
   return (
     <div className={styles.bg}>
+      <Toaster position="top-center" />
       <div className={styles.cardSingle}>
         <div className={styles.left}>
           <form className={styles.form} onSubmit={handleSubmit} autoComplete="off">

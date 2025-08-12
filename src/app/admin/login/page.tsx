@@ -13,17 +13,23 @@ export default function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Query the admin table for matching id and password
+    // Query the users table for matching user_id, password, and admin role
     const { data, error } = await supabase
-      .from("Admin")
-      .select("id")
-      .eq("id", id)
+      .from("users")
+      .select("uid, name, password, email, role")
+      .eq("uid", id)
       .eq("password", password)
+      .eq("role", "admin")
       .single();
     setLoading(false);
     if (error || !data) {
       toast.error("Login failed");
     } else {
+      // Store user info in localStorage for session management
+      localStorage.setItem('user', JSON.stringify({
+        id: id,
+        role: 'admin'
+      }));
       toast.success("Login successful!");
       setTimeout(() => { window.location.href = "/admin/dashboard"; }, 1000);
     }
