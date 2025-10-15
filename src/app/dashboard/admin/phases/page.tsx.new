@@ -1,0 +1,263 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+
+interface Phase {
+  id: string
+  name: string
+  description: string
+  deadline: string
+  max_marks: number
+  late_penalty_per_day: number
+  department: string
+  created_at: string
+  created_by: string
+}
+
+interface FormData {
+  name: string
+  description: string
+  deadline: string
+  maxMarks: string
+  latePenaltyPerDay: string
+}
+
+export default function ManagePhases() {
+  const supabase = createClientComponentClient()
+  const [loading, setLoading] = useState(true)
+  const [phases, setPhases] = useState<Phase[]>([])
+  const [adminDepartment, setAdminDepartment] = useState<string | null>(null)
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    description: '',
+    deadline: '',
+    maxMarks: '',
+    latePenaltyPerDay: ''
+  })
+
+  useEffect(() => {
+    fetchAdminInfo()
+  }, [])
+
+  const fetchAdminInfo = async () => {
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user found')
+
+      // Get user's department
+      const { data, error } = await supabase
+        .from('users')
+        .select('department')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+      if (!data?.department) throw new Error('No department found')
+
+      setAdminDepartment(data.department)
+      // Fetch phases after we know the department
+      fetchPhases()
+    } catch (error) {
+      console.error('Error fetching admin info:', error)
+      alert('Error: Could not fetch admin department information')
+    }
+  }
+
+  const fetchPhases = async () => {
+    if (!adminDepartment) return
+
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('phases')
+        .select('*')
+        .eq('department', adminDepartment)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setPhases(data || [])
+    } catch (error) {
+      console.error('Error fetching phases:', error)
+      alert('Error loading phases. Please refresh the page.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!adminDepartment) {
+      alert('Error: No department found for admin')
+      return
+    }
+
+    try {
+      setLoading(true)
+
+      // Get current user for created_by field
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user found')
+
+      const { error } = await supabase
+        .from('phases')
+        .insert({
+          name: formData.name,
+          description: formData.description,
+          deadline: formData.deadline,
+          max_marks: parseInt(formData.maxMarks),
+          late_penalty_per_day: parseFloat(formData.latePenaltyPerDay),
+          department: adminDepartment,
+          created_by: user.id
+        })
+
+      if (error) throw error
+
+      // Clear form and refresh list
+      setFormData({
+        name: '',
+        description: '',
+        deadline: '',
+        maxMarks: '',
+        latePenaltyPerDay: ''
+      })
+      fetchPhases()
+    } catch (error) {
+      console.error('Error creating phase:', error)
+      alert('Error creating phase. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading && !adminDepartment) {
+    return <div className="p-6">Loading...</div>
+  }
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">Manage Phases</h1>
+
+      {/* Add Phase Form */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Add New Phase</h2>
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">Department</label>
+          <div className="mt-1 block w-full px-3 py-2 bg-gray-100 rounded-md text-gray-700">
+            {adminDepartment || 'Loading...'}
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <input
+                type="text"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Deadline</label>
+              <input
+                type="datetime-local"
+                value={formData.deadline}
+                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Maximum Marks</label>
+              <input
+                type="number"
+                value={formData.maxMarks}
+                onChange={(e) => setFormData({ ...formData, maxMarks: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Late Penalty Per Day</label>
+              <input
+                type="number"
+                value={formData.latePenaltyPerDay}
+                onChange={(e) => setFormData({ ...formData, latePenaltyPerDay: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                required
+                min="0"
+                step="0.1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading || !adminDepartment}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            >
+              {loading ? 'Adding...' : 'Add Phase'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Phases List */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Marks</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Late Penalty</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {phases.map((phase) => (
+              <tr key={phase.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{phase.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{phase.description}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {new Date(phase.deadline).toLocaleString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{phase.max_marks}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{phase.late_penalty_per_day}</td>
+              </tr>
+            ))}
+            {phases.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                  No phases found for your department
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
