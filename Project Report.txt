@@ -1,0 +1,760 @@
+PLAYER AUCTION
+
+A PROJECT REPORT
+Submitted By
+TITTU THOMAS GEORGY
+TVE23MCA-2056
+
+To
+The APJ Abdul Kalam Technological University 
+in partial fulfillment of the award of the degree
+of
+Master of Computer Applications
+
+
+
+
+
+
+
+Department of Computer Applications
+College of Engineering Trivandrum
+Trivandrum
+April 20255 
+
+ 
+Declaration
+
+I undersigned hereby declare that the project report titled “Player Auction” submitted for partial fulfillment of the requirements for the award of the degree of Master of Computer Applications of the APJ Abdul Kalam Technological University, Kerala is a Bonafide work done by me under the supervision of Prof. Sunitha D, Assistant Professor. This submission represents my ideas in my own words and where ideas or words of others have been included. I have adequately and accurately cited and referenced the sources. I also declare that I have adhered to the ethics of academic honesty and integrity as directed in the ethics policy of the college and have not misrepresented or fabricated any data or idea or fact or source in my submission. I understand that any violation of the above will be a cause for disciplinary action by the Institute and/or University and can also evoke penal action from the sources which have thus not been properly cited or from whom proper permission has not been obtained. This report has not previously formed the basis for the award of any degree, diploma, or similar title.
+
+Place : Trivandrum						TITTU THOMAS GEORGY 
+Date : 055/04/2025				
+
+ 
+DEPARTMENT OF COMPUTER APPLICATIONS
+
+COLLEGE OF ENGINEERING
+
+TRIVANDRUM
+
+
+
+
+
+
+
+
+
+CERTIFICATE
+
+This is to certify that the report entitled PLAYER AUCTION submitted by Tittu Thomas Georgy to the APJ Abdul Kalam Technological University in partial fulfillment of the requirements for the award of the Degree of Master of Computer Applications is a bonafide record of the project work carried out by him under my guidance and supervision. This report in any form has not been submitted to any University or Institute for any purpose.
+
+
+Guide                                                                                                                           Supervisor
+
+
+Head of the Department
+
+
+
+Acknowledgment
+First and foremost I thank GOD almighty and my parents for the success of this project. I owe sincere gratitude and heart-full thanks to everyone who shared their precious time and knowledge for the successful completion of my project.
+
+I am extremely thankful to Dr. Suresh K, Principal, College of Engineering Trivandrum for providing me with the best facilities and atmosphere which was necessary for the successful completion of this project.
+
+I am extremely grateful to Dr. Liji P I, HOD, Department of Computer Applications, for providing me with the best facilities and atmosphere for creative work guidance and encouragement.
+
+I express my sincere thanks to Prof. Sunitha D, Assistant Professor, Department of Computer Applications, College of Engineering Trivandrum for her valuable guidance, support, and advice that aided in the successful completion of my project.
+
+I profusely thank the other Asst. Professors in the department and all other staff of CET, for their guidance and inspiration throughout my course of study.
+I owe my thanks to my friends and all others who have directly or indirectly helped me in the successful completion of this project. No words can express my humble gratitude to my beloved parents and relatives who have been guiding me in all walks of my journey.
+
+
+Tittu Thomas Georgy
+ 
+CONTENTS
+Abstract										
+
+1: Introduction											1
+
+2: Problem Definition and Motivation								2
+	2.1    Existing System									2
+	         2.1.1     Limitations of Existing System						2
+	 2.2   Proposed System									3
+	         2.2.1     Advantages of Proposed System						4
+
+3: Requirement Analysis									5
+	3.1   Purpose										5
+	3.2   Overall Description								5
+	         3.2.1    Hardware Requirements							5
+	         3.2.2    Software Requirements							6
+	3.3    Functional Requirements								6
+	         3.3.1   React JS, MUI								6
+	         3.3.2   Express JS, NodeJS								6	         3.3.3   MongoDB									6
+         3.3.4   WebSocket									6
+	3.4   Non-Functional Requirements							7
+	         3.4.1    Performance Requirements							7
+	         3.4.2    Security Requirements							7	         3.4.3    Real-Time Performance							7
+
+4:  Design and Implementation								8
+	4.1   Overall Design									8
+	4.2   System Design									8
+	         4.2.1    Database Schema							             8
+	         4.2.2    Backend Architecture							8
+	         4.2.3    Real-Time Communication via WebSocket					9
+	         4.2.4    Frontend Framework							9
+	4.3   Data Flow Diagram								9
+4.4   Database Design									11
+	4.5   Screenshots of User Interface							15
+
+5:  Coding											24
+	5.1   Introduction									24
+	5.2   React										24
+	5.3   Express										25
+5.4   Material-UI (MUI)									25
+	5.5   Sample Coding									25
+	         5.5.1    App.tsx								             25
+	         5.5.2    Server.ts									28
+
+6: Testing and Implementation								31
+	6.1  Introduction									31
+	6.2  Testing Methods									31
+	        6.2.1    Unit Testing								31
+	        6.2.2    Integration Testing								31
+	        6.2.3    Alpha Testing								32
+	        6.2.4    BetaTesting									32
+	6.3   Test Cases										32
+
+7: Results and Discussion									37
+	7.1    Advantages and Limitations							37
+	         7.1.1   Advantages									37
+	         7.1.2   Limitations									38
+
+8: Conclusion and Future Scope								39
+	8.1   Conclusion									39
+	8.2    Future Scope and Enhancements							39
+
+Bibliography											41
+
+ 
+LIST OF FIGURES
+						
+4.3.1: Level 0 of Data Flow Diagram								9
+4.3.2: Level 1 of Data Flow Diagram								10
+4.3.3: Level 2 of Data Flow Diagram (Admin)							10
+4.3.4: Level 2 of Data Flow Diagram (Club)							11
+4.5.1: Login Page										15
+4.5.2: Admin Home Page									16
+4.5.3: Admin Auction Page									16
+4.5.4: Admin Player Sold									17
+4.5.5: Admin Clubs Page									17
+4.5.6: Admin Add Page								 		18
+4.5.7: Admin Club View									18
+4.5.8: Admin Players Page									19
+4.5.9: Admin Add Player									19
+4.5.10: Admin Player View									20
+4.5.11: Admin Settings Page									20
+4.5.12: Club Homepage										21
+4.5.13: Club Auction Page									21
+4.5.14: Club Auction Place Bid									22
+4.5.15: Club Player View									22
+4.5.16: Club Profile View									23
+4.5.17: Club Auction View Mobile								23
+
+
+
+
+
+
+
+
+
+
+
+
+
+LIST OF TABLES
+						
+4.4.1: Clubs DB										11
+4.4.2: PlayersDB										12
+4.4.3: Bids DB											12
+4.4.4: Auctions DB										13
+4.4.5: Settings DB										13
+4.4.6: File DB											14
+6.3.1: Admin Test Cases									33
+6.3.2: Club Test Cases										33
+6.3.3: Player Test Cases										34
+6.3.4: File Uploads Test Cases									35
+6.3.5: Settings Test Cases									35
+6.3.6: Database Integrity Test Cases								36
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abstract
+The Live Football Player Auction Software is a real-time bidding platform designed to facilitate football player auctions for leagues, clubs, and tournaments. Developed using the MERN stack (MongoDB, Express.js, React, Node.js) and integrated with WebSockets (WS) for instant bid updates, this system ensures a seamless and interactive auction experience.
+The platform enables team managers and organizers to bid on players in real time, with features such as live bid tracking, automatic timeouts, bid validation, and instant player allocation. A responsive React-based frontend ensures smooth user interaction, while WebSockets handle bid synchronization across all participants, ensuring fairness and transparency. MongoDB efficiently manages player records, auction history, and team rosters, while Node.js and Express.js provide a scalable backend for secure and efficient bid processing.
+Designed exclusively for football, the system includes player profiles, team budget management, and auction history tracking. The platform caters to league organizers, clubs, and fantasy football events, making player selection an engaging and competitive process.
+By leveraging real-time WebSocket communication and the MERN stack, the Live Football Player Auction Software delivers an optimized and immersive experience, ensuring efficient team-building and transparent player acquisitions.
+
+
+
+
+
+ 
+Chapter 1
+	Introduction	
+Football player auctions are a key part of team selection in leagues and tournaments, enabling teams to strategically acquire players based on their skills, performance, and budget. However, organizing a live auction can be a challenging task, requiring real-time bid tracking, budget management, and seamless player allocation. Without a well-structured system, these processes can become inefficient and prone to errors.
+To streamline this experience, the Live Football Player Auction Software was developed as a comprehensive web-based solution designed to handle every aspect of an auction with ease. Built using the MERN stack (MongoDB, Express.js, React, and Node.js) and integrated with WebSockets (WS) for real-time bid updates, the platform ensures a smooth, transparent, and engaging auction process. It allows team managers and organizers to conduct live auctions with automated bid validation, instant budget calculations, and real-time player assignments.
+With its intuitive interface and robust backend, this system enhances fairness, efficiency, and accessibility, making football player auctions more organized and competitive. Whether for professional leagues, local tournaments, or fantasy football events, this platform offers a fast, scalable, and user-friendly solution to revolutionize player auctions.
+
+
+
+
+
+ 
+Chapter 2
+Problem Definition and Motivation
+The development of the Football Player Auction Software arises from the need to improve the efficiency and transparency of player selection and bidding processes. Traditional auction methods, whether manual or digital, often fail to handle the real-time intensity of bidding, budget constraints, and seamless team formation. These inefficiencies lead to bid conflicts, delays, and errors in team allocation, making it difficult for organizers, managers, and participants to conduct a smooth auction.
+Existing auction platforms, while functional, are often generic and not optimized for football player auctions. They lack real-time bid synchronization, automated player allocation, and a centralized dashboard for tracking teams, budgets, and bids. This results in a complex, time-consuming, and error-prone auction experience, requiring manual intervention at multiple stages.
+2.1  Existing System
+Currently, football player auctions are managed through manual bidding or basic digital tools such as spreadsheets and generic bidding platforms. These systems lack real-time capabilities, automated budget enforcement, and structured team formation, leading to frequent errors and inefficiencies.
+Traditional methods require in-person coordination, where bids are placed vocally or via spreadsheets. Even online platforms often suffer from delayed bid updates, lack of automated team allocation, and limited transparency, creating a stressful and inefficient auction experience for teams and organizers.
+2.1.1  Limitations of Existing System
+1.	Manual and Time-Consuming – Spreadsheets or paper-based processes require extensive coordination and increase the likelihood of errors. 
+2.	Lack of Real-Time Bid Updates – Delays in bid reflection can lead to confusion and disputes among team managers.
+3.	No Budget Enforcement – Many existing systems fail to automatically validate and track spending, allowing teams to exceed their allocated budget.
+4.	Limited Player Database – The absence of a comprehensive database with player stats, auction history, and past performances affects decision-making.
+5.	Scalability Issues – Current solutions struggle to handle multiple teams, simultaneous bidding, and varying auction formats effectively.
+Despite transitioning towards digital tools, existing platforms still fail to provide an efficient, transparent, and automated solution tailored specifically for football player auctions.
+2.2 Proposed System
+The Football Player Auction Software is designed to eliminate the inefficiencies of traditional and existing digital methods by providing a real-time, automated, and scalable solution. Developed using the MERN stack (MongoDB, Express.js, React, and Node.js), the system utilizes WebSockets for real-time bidding updates and ensures seamless team formation and budget management.
+●	Real-Time Bidding System – Uses WebSockets to reflect bid updates instantly, preventing delays and confusion.
+●	Automated Budget Management – Enforces budget constraints by validating bids before placement.
+●	Centralized Player Database – Stores player profiles, auction history, performance stats, and bidding trends.
+●	Interactive Dashboard – Displays live auction progress, bid history, and team composition dynamically.
+●	Automated Player Allocation – Upon a successful bid, the system instantly assigns the player to the team, updating records.
+●	Multi-Team and Scalable Architecture – Supports various auction formats (open/closed bidding, timer-based, etc.), making it adaptable for different tournaments.
+2.2.1  Advantages of Proposed System
+●	Instant Real-Time Bidding – Eliminates bid delays and ensures all teams receive live updates.
+●	Error-Free Budget Tracking – Prevents teams from exceeding spending limits through automated budget calculations.
+●	Data-Driven Decision Making – Offers detailed analytics, past bidding trends, and player stats to aid in better team selection.
+●	 Improved Transparency – Reduces bid conflicts with structured bid logging and tracking.
+●	Highly Scalable – Supports large-scale auctions with multiple teams, dynamic bidding rules, and a customizable interface.
+●	User-Friendly & Mobile-Compatible – Ensures teams can participate from anywhere using a responsive web application.
+The Football Player Auction Software redefines traditional auction processes by integrating automation, real-time updates, and structured data management, ensuring a smooth, efficient, and transparent auction experience. 
+Chapter 3
+Requirement Analysis
+The requirement analysis outlines the purpose, overall description, hardware and software requirements, as well as functional and non-functional requirements for the development of the proposed football player auction platform.
+3.1 Purpose
+The purpose of the requirement analysis is to define the specifications and criteria that the platform must meet. This includes identifying the hardware and software components, functional capabilities, and non-functional attributes necessary for the successful implementation of the platform.
+3.2 Overall Description
+3.2.1  Hardware Requirements
+⮚	Processor				-	Pentium 3
+⮚	RAM				-	512 MB
+⮚	Hard Disk			-	20 GB
+⮚	Cache Memory			-	512KB
+⮚	Monitor				-	SVGA Colour
+⮚	Keyboard			-	Standard
+3.2.2   Software Requirements
+⮚	Operating System		-	Windows 8/9/10/11 
+⮚	Front End			-	React JS, MUI
+⮚	Back End			-	Express JS, NodeJS
+⮚	Database			-	MongoDB
+⮚	Browser				-	Edge, Firefox, Chrome
+3.3 Functional Requirements
+3.3.1 React JS, MUI
+The front end of the platform will be developed using React JS and MUI (Material-UI) to deliver a responsive, visually appealing, and user-friendly interface. This combination ensures a cohesive and modern design, enhancing the overall user experience.
+3.3.2 Express JS, Node.js
+The back end of the platform will leverage Express JS and Node.js, providing a robust, scalable, and secure framework for managing auction data, processing bid requests, and ensuring smooth communication between the client and server.
+3.3.3 MongoDB
+MongoDB will be used as the platform’s database, offering flexible, efficient storage for complex data structures such as player profiles, bidding records, and auction results. MongoDB's schema-less design will allow for easy adaptation to different auction formats and requirements.
+3.3.4 WebSocket (WS) for Real-Time Communication
+WebSocket will be utilized to facilitate real-time communication between the client and server. This will allow for live updates on bids, player status, and auction events. The use of WebSocket ensures that all participants and viewers have synchronized and instant access to auction progress without needing to reload or refresh the page.
+3.4 Non-Functional Requirements
+3.4.1 Performance Requirements
+The auction platform is designed to handle a high volume of simultaneous users with responsive, efficient performance. Load testing will be conducted to validate the platform’s ability to manage real-time bidding, ensuring smooth transactions even under peak traffic conditions.
+3.4.2 Security Requirements
+Security measures will be integral to the platform, including data encryption, secure authentication, and protections against common web vulnerabilities. The system will implement role-based access control, ensuring that only authorized users can place bids or manage auction settings. Industry-standard security practices will be followed to protect sensitive user and financial data.
+These functional and non-functional requirements form the basis for the development phases of the auction platform, ensuring it meets the project's technological, functional, and performance expectations for a successful and efficient football player auction system.
+3.4.3 Real-Time Performance
+The WebSocket integration must be optimized for real-time performance, ensuring that updates are transmitted with minimal delay. The system should be able to handle multiple concurrent connections, providing seamless communication for all users involved in the auction. Load testing will focus on maintaining efficient WebSocket connections under varying traffic conditions.
+
+ 
+Chapter 4
+Design and Implementation
+4.1 Overall Design
+The overall design of the Auction platform is focused on providing an intuitive, scalable, and real-time system that caters to the needs of both auction admins and club bidders. The design emphasizes seamless communication, real-time bidding functionality, and a smooth user experience for participants and administrators. The platform is divided into two key modules: Admin and Club Bidder, each with distinct roles and responsibilities. A centralized MongoDB database ensures efficient data management and communication between these modules.
+4.2 System Design
+The system design outlines the database schema, backend architecture, WebSocket integration, and front-end framework, ensuring a cohesive and high-performance auction experience.
+4.2.1 Database Schema
+The database schema is designed to efficiently store auction-related data, including player profiles, bids, and user accounts. MongoDB's schema-less design allows flexibility in handling data, enabling the platform to scale as the number of players, bids, and users increases. Collections include players, bids, and users, with relationships to track bid histories, auction status, and participant actions. The schema is adaptable, allowing easy modifications as auction rules evolve or new features are added.
+4.2.2   Backend Architecture
+The backend architecture is built on Node.js with the Express framework, offering a secure and scalable platform for auction management. The Admin and Club Bidder modules are developed as separate services with well-defined APIs to manage the auction flow. WebSocket integration ensures real-time communication between the backend and frontend,  
+allowing instant updates for both admins and bidders. This architecture ensures that the platform can handle high user traffic and is extensible for future improvements.
+4.2.3 Real-Time Communication via WebSocket
+WebSocket technology is leveraged to provide real-time communication between the server and the client. This persistent connection allows for instant updates on bids, player selections, and auction status. Both admins and bidders are notified in real time when bids are placed, when the auction progresses, or when a player is selected. This ensures that all participants are updated promptly without the need for page refreshes, providing an engaging and smooth experience for both admins and bidders.
+4.2.4 Front-end Framework
+The front end is developed using React JS and Material-UI (MUI) to provide a responsive, user-friendly interface for both auction admins and club bidders. React ensures dynamic updates to the interface, allowing users to interact with the platform in real time. MUI's component library is used to maintain consistent styling throughout the platform, while offering flexibility for customization based on the auction's branding needs. Real-time updates, powered by WebSocket, ensure that both admins and bidders can track the auction's progress and place bids as events unfold.
+
+4.3 Data Flow Diagram
+Level 0 of Data Flow Diagram:
+ 
+Fig 4.3.1: Level 0 of Data Flow Diagram
+
+Level 1 of DFD:
+ 
+Fig 4.3.2: Level 1 of Data Flow Diagram
+Level 2 of DFD
+ 
+Fig 4.3.3: Level 2 of Data Flow Diagram (Admin)
+
+ 
+Fig 4.3.4: Level 2 of Data Flow Diagram (Club)
+4.4 Database Design
+
+Field	Type	Key	Description
+_id	ObjectId	Primary Key	Unique identifier for each club
+name	String	-	Name of the club
+code	String	-	Unique club code
+password	String	-	Club's login password
+isAdmin	Boolean	-	Indicates if the club is an admin
+logo	ObjectId	Foreign Key	Refers to files collection for logo
+manager.img	ObjectId	Foreign Key	Refers to files collection for manager image
+manager.name	String	-	Name of the club manager
+balance	Number	-	Remaining balance for bidding
+createdAt	Date	-	Timestamp when club was created
+updatedAt	Date	-	Timestamp of last update
+Table 4.4.1 : Clubs DB
+
+Field	Type	Key	Description
+_id	ObjectId	Primary Key	Unique identifier for each player
+name	String	-	Player's name
+image	ObjectId	Foreign Key	Refers to files collection for player image
+position	String	-	Player’s position (ST, CM, DF, GK)
+basePrice	Number	-	Base price for auction
+bid	ObjectId	Foreign Key	Refers to bids collection
+club	ObjectId	Foreign Key	Refers to clubs collection
+createdAt	Date	-	Timestamp when player was added
+updatedAt	Date	-	Timestamp of last update
+Table 4.4.2 : Players DB
+
+
+Field	Type	Key	Description
+_id	ObjectId	Primary Key	Unique identifier for each bid
+player	ObjectId	Foreign Key	Refers to players collection
+club	ObjectId	Foreign Key	Refers to clubs collection
+bid	Number	-	Amount of the bid
+state	Number	-	0 (inactive), 1 (active)
+createdAt	Date	-	Timestamp when bid was placed
+updatedAt	Date	-	Timestamp of last update
+Table 4.4.3 : Bids DB
+
+
+Field	Type	Key	Description
+_id	ObjectId	Primary Key	Unique identifier for auction session
+player	ObjectId	Foreign Key	Refers to players collection
+bid	ObjectId	Foreign Key	Refers to bids collection
+status	String	-	Status (pause, live, stopped)
+createdAt	Date	-	Timestamp when auction started
+updatedAt	Date	-	Timestamp of last update
+Table 4.4.4 : Auctions DB
+
+Field	Type	Key	Description
+_id	ObjectId	Primary Key	Unique identifier for settings
+initialBalance	Number	-	Initial balance for each club
+playersPerClub	Number	-	Max number of players per club
+bidTime	Number	-	Time limit for each bid
+addOnTime	Number	-	Additional time on last-second bids
+bidMultiple	Number	-	Minimum increment in bidding
+keepMinBid	Boolean	-	Whether minimum bid is enforced
+minBid	Number	-	Minimum bid amount
+resetPassword	String	-	Password reset field
+createdAt	Date	-	Timestamp when settings were created
+updatedAt	Date	-	Timestamp of last update
+
+Table 4.4.5 : Settings DB
+
+
+Field	Type	Key	Description
+_id	ObjectId	Primary Key	Unique identifier for file
+filename	String	-	Name of the file
+size	Number	-	File size in bytes
+type	String	-	MIME type (image/png, image/jpeg, etc.)
+fileId	String	-	Unique file identifier
+downloadURL	String	-	URL for downloading file
+createdAt	Date	-	Timestamp when file was uploaded
+updatedAt	Date	-	Timestamp of last update
+
+Table 4.4.6 : File DB
+
+
+
+4.5 Screenshots of User Interface
+ 
+Figure 4.5.1 : Login Page
+ 
+
+Figure 4.5.2: Admin Home Page
+
+
+ 
+Figure 4.5.3: Admin Auction Page
+ 
+Figure 4.5.4:  Admin Player Sold
+
+ 
+Figure 4.5.5 Admin Clubs Page
+
+ 
+Figure 4.5.6: Admin Add Club
+
+
+ Figure 4.5.7 : Admin Club View
+  
+Figure 4.5.8: Admin Players Page
+
+
+ 
+Figure 4.5.9: Admin Add Player
+ 
+Figure 4.5.10: Admin Player View 
+
+
+ Figure 4.5.11: Admin Settings Page
+ 
+Figure 4.5.12 : Club Homepage
+ Figure 4.5.13 : Club Auction Page
+ 
+Figure 4.5.14: Club Auction Place Bid
+
+ 
+Figure 4.5.15: Club Player View
+
+ 
+Figure 4.5.16: Club Profile View
+
+ 
+Figure 4.5.17: Club Auction View Mobile 
+Chapter 5
+Coding
+5.1 Introduction
+Coding is the process of transforming the system's design into a readable and executable format for a computer. This phase is crucial in software development as it translates design specifications into source code, making the system functional. Coding also involves writing internal documentation to facilitate future code maintenance and verification against the original design specifications.
+In addition to immediate coding tasks, efficient coding practices are essential to reduce the long-term costs associated with the system, particularly those related to testing, maintenance, and future scalability. By following best practices in coding, developers ensure high-quality code that is easier to manage, update, and debug over time.
+
+5.2  React JS
+React is a widely used JavaScript library developed by Facebook for building dynamic and interactive user interfaces, especially suitable for single-page applications that require high responsiveness. React allows developers to build reusable UI components that automatically update when the data changes, providing a seamless user experience.
+For the Auction platform, React was chosen due to its efficiency in creating a highly interactive, component-based UI that meets the needs of the admin and bidder modules. React’s unidirectional data flow and virtual DOM mechanism ensure optimal performance, even as the application scales. The React ecosystem also offers tools like React Router for navigation and state management libraries such as Redux, making it well-suited for complex applications like auctions. Additionally, React’s extensive community support and flexibility allow for quick iteration and implementation of features, ensuring a robust and scalable frontend architecture for the auction platform. 
+5.3 Express JS
+Express JS is a fast, minimalistic framework for Node.js that simplifies the process of building server-side applications and web APIs. It provides essential features like routing, middleware support, and HTTP request handling, making it ideal for building RESTful APIs and backend services.
+For the Auction platform, Express was selected as the backend framework due to its flexibility, scalability, and ease of use. Express simplifies the handling of bid data, user authentication, and real-time communication for the auction. It also enables efficient routing for different modules such as Admin and Club Bidder, ensuring smooth communication between the frontend and backend. Additionally, Express can be easily integrated with other Node.js modules and WebSocket for real-time functionalities, making it a perfect fit for the real-time, interactive nature of the auction platform.
+5.4 Material-UI (MUI)
+Material-UI (MUI) is a popular React component library based on Google's Material Design principles. It offers a wide range of pre-designed components that adhere to modern UI standards, providing a consistent, visually appealing, and responsive interface. MUI helps speed up the development process by reducing the need for custom CSS while maintaining flexibility for further customization.
+For the Auction platform, MUI was chosen for its polished and professional user interface components, which are essential for creating a smooth and intuitive experience for both admins and bidders. MUI’s built-in theming system allows for easy customization, ensuring the platform can maintain a cohesive look and feel throughout. The library also supports responsive design, making it adaptable across various devices and screen sizes, which is crucial for ensuring a seamless experience for users regardless of the device they are using.
+By integrating MUI, the Auction platform can deliver a consistent and modern visual design, while reducing the time and effort spent on designing and styling custom components.
+5.5 Sample Coding
+5.5.1 App.tsx
+import { ThemeProvider } from "@emotion/react";
+import { setupIonicReact, IonApp } from "@ionic/react";
+import { createTheme, CssBaseline } from "@mui/material";
+import axios from "axios";
+import { useMemo, useEffect } from "react";
+import CommonServices from "./services/CommonServices";
+import { useLoader } from "./hooks/Loader";
+import { enqueueSnackbar, SnackbarProvider } from "notistack";
+import Router from "./services/CommonRouter";
+import { AuctionProvider } from "./hooks/AuctionProvider";
+import { AuthProvider } from "./hooks/Authenticate";
+
+// Initialize Ionic
+setupIonicReact();
+
+// Configure Axios
+const serverURL = import.meta.env.VITE_SERVER_URL || `http://192.168.1.7:8005`;
+axios.defaults.baseURL = serverURL;
+// console.log("Server URL:", serverURL);
+
+const App: React.FC = () => {
+  // Set up common services
+  CommonServices.setLoader(useLoader());
+  CommonServices.setEnqueueSnackbar(enqueueSnackbar);
+
+
+  const theme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          background: {
+            default: '#000000'
+          },
+          primary: {
+            main: '#2196f3', // Primary blue
+          },
+          secondary: {
+            main: '#ba68c8', // Secondary purple
+          },
+          success: {
+            main: '#66bb6a', // Green for success
+          },
+          error: {
+            main: '#e57373', // Red for errors
+          },
+          warning: {
+            main: '#ffa726', // Orange for warnings
+          },
+          info: {
+            main: '#29b6f6', // Light blue for informational
+          },
+        },
+        }),
+    []);
+
+  return (
+    <IonApp>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <SnackbarProvider>
+          <AuthProvider>
+            <AuctionProvider>
+              <Router />
+            </AuctionProvider>
+          </AuthProvider>
+          {/* <div>hi</div> */}
+        </SnackbarProvider>
+      </ThemeProvider>
+    </IonApp>
+  );
+};
+
+export default App;
+
+5.5.2 server.ts
+import colors from 'colors';
+colors.enable();
+import express, { Request, Response } from 'express';
+import http from 'http';
+import dotenv from 'dotenv';
+import mongoose, { Types } from 'mongoose';
+import morgan from 'morgan';
+import cors from 'cors';
+import router from './modules/router';
+import { sendStandardResponse } from './common/extras/helpers';
+import WebSocket from 'ws';
+import Google from './extras/google';
+import{createSettings,isSettingExist} from ‘./modules/settings/controllers/settings.controller';
+import Club from './modules/club/models/Club';
+import { Server } from 'socket.io';
+import { auctionEvents } from './modules/auction/apis';
+import { createAuction } from './modules/auction/controllers/auction.controller';
+import Bid from './modules/auction/models/Bid';
+
+dotenv.config();
+const PORT = process.env.PORT;
+if (!PORT) {
+    throw new Error('PORT not found in environment variables!');
+}
+const app = express();
+const server = http.createServer(app);
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(morgan('dev'));
+app.use(cors());
+app.use(router);
+
+app.use((error: Error, req: Request, res: Response) => {
+    console.info('Caught error by the error handler!!!');
+    // log the error
+    sendStandardResponse(res, 'INTERNAL SERVER ERROR', {
+        error: error.message, message: 'Oops! Something went wrong! We\'re working on it!',
+    });
+});
+
+app.use((req: Request, res: Response) => {
+    console.log('Received an error event!'.bgRed, new Error(`404 Found for ${req.url}`));
+    sendStandardResponse(res, 'NOT FOUND', {
+        error: '404 Not Found (REST API Endpoint not implemented)',
+        message: 'Oops! Something went wrong! We\'re working on it!',
+    });
+});
+console.log('Trying to connect to mongodb'.yellow);
+mongoose.connect('mongodb://127.0.0.1:27017/auction')
+    .then(async () => {
+        console.log('Connected to mongodb'.bgGreen);
+        await createSettings();
+        await createAuction();
+        // await Bid.updateMany({}, { state: 1 })
+    })
+    .catch((error) => console.log('Received an error event!'.bgRed, error));
+
+app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`.bgGreen))
+    .on('error', (error) => console.log('Received an error event!'.bgRed, error));
+
+Google.Drive.initialize(Google.Auth.getAuth()); // GoogleMail
+
+const io = new Server(server, {
+    cors: { origin: '*' }, // Allow frontend to connect
+});
+
+let client: { id: string, no: number }[] = [];
+// Attach event listeners for the connection
+io.on('connection', (socket) => {
+    if (!client.find(client => client.id === socket.id)) {
+        client = [...client, { id: socket.id, no: client.length + 1 }]
+    }
+    // io.disconnectSockets(true)
+    console.log('Active connections:', io.engine.clientsCount);
+    console.log('New client connected:', client);
+    auctionEvents();
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
+// Start the server
+server.listen(process.env.SOCKET_PORT, () => {
+    console.log(`Socket Server running on http://localhost:${process.env.SOCKET_PORT}`);
+});
+
+// Export io for use in other files
+export { io }; 
+Chapter 6
+Testing and Implementation
+6.1 Introduction
+System testing is an essential part of the software development life cycle, ensuring that the system performs as expected before it goes live. The testing process follows a detailed system test plan, which outlines the specific testing activities, schedule, and resources needed. It also includes the identification of test cases and expected results for each case. The goal of system testing is to identify errors, validate the system's accuracy and efficiency, and ensure that the software functions correctly across different environments. System testing helps ensure the system's reliability, minimizing the chances of issues arising post-deployment.
+6.2 Testing Methods
+6.2.1 Unit Testing
+Unit testing involves verifying the smallest components of the software, known as modules, to ensure they function as expected in isolation. During the development stage, each module is tested separately to confirm it performs its intended functionality. For the Auction platform, key modules like User Authentication, Bidding Logic, Payment Processing, and Admin Management will be tested individually. Each form or function within these modules is tested to ensure the expected output is produced. The purpose of unit testing is to catch errors early in the development process and ensure that individual components work correctly before integration.
+6.2.2 Integration Testing
+Once unit testing is completed, integration testing combines all the individual modules into a complete system and tests them as a whole. This phase focuses on verifying that data flows seamlessly across different modules and interfaces. Integration testing checks whether the system's components work together as expected, ensuring that there are no data losses, mismatches, or conflicts between modules. This step is crucial as issues can arise when  
+different functions are integrated, and errors may be difficult to isolate. The goal is to identify and resolve any issues that occur when the individual modules are combined.
+6.2.3 Alpha Testing
+Alpha testing is performed by the internal development team before the software is released to external users. It is usually conducted in a controlled environment, where developers observe the application's performance and identify any issues or defects. The focus of alpha testing is to simulate real user tasks using both black-box and white-box techniques. Developers attempt to find bugs or usability issues by performing actions that an end user might typically perform. Minor design changes may still be possible after alpha testing, allowing the team to fine-tune the application before moving to external testing phases.
+6.2.4 Beta Testing
+Beta testing is conducted by real users in a real-world environment, making it an important form of external user acceptance testing. A beta version of the Auction platform is released to a limited group of users, typically chosen from the actual end-users (e.g., bidders or administrators). Feedback collected from these users helps identify any bugs or issues that might have been overlooked during internal testing phases. Beta testing not only provides valuable insight into the product’s quality but also serves to validate the product's features and functionality. This phase helps ensure that the platform performs as expected in diverse real-time environments, improving the overall user experience and boosting customer satisfaction before the final release.
+6.3 Test Cases
+Test cases are a critical component of the software testing process. They consist of predefined conditions or inputs used to verify whether a software application behaves as expected under specific circumstances. Each test case includes details such as input data, expected output, and the steps to be followed during testing. Test cases serve as a guide for testers to systematically verify the system’s functionality, identify errors, and ensure the software meets its requirements. For the Auction platform, sample test cases would include verifying bid placement, checking user login functionality, confirming the payment process, and ensuring real-time updates during the auction process.
+1. Admin Functionalities
+Test Case ID	Description	Input	Expected Output
+ADM-001	Create new player	Valid player info	Player saved in DB
+ADM-002	Create duplicate player	Existing player name or ID	Error: duplicate key
+ADM-003	Update auction settings	Valid config values	Settings updated
+ADM-004	Upload player image	Valid image file	File uploaded & linked
+ADM-005	View all registered clubs	None	List of clubs returned
+Table 6.3.1: Admin Test Cases
+
+2. Club Functionalities
+Test Case ID	Description	Input	Expected Output
+CLB-001	Register club	Valid name, username, password	Club saved to DB
+CLB-002	Login with valid credentials	Correct username/password	Token or success response
+CLB-003	Login with wrong password	Invalid password	Error: authentication failed
+CLB-004	Place bid on player	Bid amount > current bid	Bid saved, player updated
+CLB-005	Place bid with insufficient balance	High bid amount	Error: insufficient funds
+CLB-006	Exceed player limit	More than playersPerClub	Error: max players reached
+Table 6.3.2: Club Test Cases
+3. Player Auction
+Test Case ID	Description	Input	Expected Output
+AUC-001	Start auction	Valid player selected	Auction status: live
+AUC-002	End auction manually	Valid auction ID	Status: stopped
+AUC-003	Auto-extend auction	Bid placed at last second	Auction time extended
+AUC-004	Assign player to winning club	Auction end reached	Player's club updated
+AUC-005	Pause auction	Admin triggers pause	Auction status: pause
+Table 6.3.3: Player Test Cases
+4. File Uploads
+Test Case ID	Description	Input	Expected Output
+FIL-001	Upload valid image	PNG/JPG image	File stored in DB
+FIL-002	Upload unsupported format	PDF or GIF	Error: invalid format
+FIL-003	Upload large image	> 5MB	Error: file too large
+Table 6.3.4: File Uploads Test Cases
+5. Settings Validation
+Test Case ID	Description	Input	Expected Output
+SET-001	Save default settings	Values like minBid, bidTime	Settings saved
+SET-002	Save with missing field	Omit bidTime	Error: field required
+SET-003	Use invalid bid multiple	Negative or 0	Error: invalid value
+Table 6.3.5: Settings Test Cases
+6. Database Integrity Tests
+Test Case ID	Description	Input	Expected Output
+DB-001	Save player without base price	No basePrice field	Default to 100
+DB-002	Save club with duplicate username	Same username	Error: duplicate key
+DB-003	Delete a club	Club ID	Cascade not allowed on players (ensure consistency)
+Table 6.3.6: Database Integrity Test Cases 
+Chapter 7
+Results and Discussion
+7.1 Advantages and Limitations
+7.1.1 Advantages
+❖	Centralized Event Management: The Auction platform simplifies event management by offering centralized control, allowing admins to oversee and manage the entire auction process in one place. This centralization reduces the complexity of handling multiple platforms and streamlines event coordination.
+❖	User-Friendly Interface: A well-designed and intuitive user interface ensures that all users—admins, bidders, and participants—can easily navigate the platform. This user-centric design improves overall user experience and allows users to focus on their core tasks without being hindered by complex workflows.
+❖	Efficient Registration Process: The Auction platform features a seamless online registration system, which automates user sign-ups, bid placements, and notifications. This reduces the workload for administrators, as it eliminates the need for manual data entry and enhances overall system efficiency.
+❖	Real-Time Updates: With the auction running in real-time, participants and admins can receive immediate updates about bids, auction status, and any changes made. This ensures that everyone involved in the process is kept up to date with the latest developments, allowing for better decision-making and engagement.
+❖	Results and Evaluation Tracking: Automated tracking of bids, payments, and auction results ensures accuracy. By automating the evaluation process, the platform reduces the chances of human error, providing transparency and fairness throughout the auction.
+❖	Convenient Access: The platform is accessible from any device, allowing bidders and admins to access auction information, place bids, and check results from anywhere, thus increasing convenience and flexibility.
+❖	Approval-Based Signup: Admins can approve or reject bids based on predefined criteria, giving them full control over who can participate. This security feature  
+❖	ensures that only eligible and authorized users can access sensitive event data and place bids.
+❖	Scalability and Flexibility: The platform is designed to scale, allowing the addition of new features and the accommodation of multiple event types, making it adaptable for various auction scenarios. This flexibility makes the system suitable for a range of use cases, from small-scale to large-scale auctions.
+❖	Enhanced Security: The platform incorporates robust security measures, including secure access control and data encryption, ensuring that all user data, bid information, and payment transactions are protected against unauthorized access and potential breaches.
+7.1.2  Limitations
+➔	Dependency on Internet Connectivity: As the platform is cloud-based, users require stable internet connectivity to participate in auctions. This can be a limitation in regions where internet access is unreliable or unavailable, potentially excluding certain users from the auction process.
+➔	Limited Offline Support: Currently, the platform is designed exclusively for online use. There is no support for offline or hybrid auction models, meaning that the system cannot be utilized for in-person events without internet access. This limitation could affect its applicability in certain environments or scenarios.
+➔	Initial Learning Curve:Although the interface is user-friendly, some new users, especially those who are not familiar with online auction systems, may experience an initial learning curve. Proper training and onboarding materials are required to help users quickly get up to speed with the platform’s features and functionalities.
+➔	Maintenance and Updates: Continuous updates and maintenance are crucial to ensure the platform stays secure, efficient, and compatible with evolving technologies. Regular patches, bug fixes, and updates to improve functionality are necessary, requiring ongoing developer resources and attention. 
+ Chapter 8 
+Conclusion and Future Scope
+8.1 Conclusion
+In conclusion, the Auction Platform provides a comprehensive solution for managing online auctions with multiple bidders. The system enables a seamless experience for Admin and Club Bidders to participate in and manage auctions effectively. Using modern web technologies like Node.js with Express for the backend and React with Material-UI for the frontend, the application delivers an interactive and user-friendly interface. The platform ensures smooth real-time bidding, transparent bid tracking, and secure data management, contributing to an efficient auction process.
+While the platform offers scalability, real-time functionality, and secure user authentication, there are challenges such as internet connectivity dependency and the need for better support across various devices. These limitations will be addressed in future updates to enhance the user experience. The Auction Platform is designed to evolve with the growing needs of users, making it a robust tool for managing online bidding in a secure and efficient manner.
+8.2 Future Scope
+●	Player Stats and Analytics::
+Integrating player statistics and analytics (e.g., performance history, match statistics, etc.) for each player in the auction would allow bidders to make more informed decisions based on detailed data. This could include visual charts, graphs, and historical performance insights.
+●	Advanced Bidding Features:
+ Introducing advanced bidding features, such as auto-bidding where users can set maximum bid amounts, or bid increments, would provide more flexibility and functionality to the bidding process. 
+
+●	Multiple Auction Types:
+ Expanding the platform to support multiple auction formats, such as silent auctions, reverse auctions, and Dutch auctions, would increase the platform's adaptability and usability for different auction scenarios.
+●	Extended Payment Gateway Integration:
+ Adding more payment options, including cryptocurrency and regional payment gateways, would expand the accessibility of the platform and provide more flexibility for users.
+●	Enhanced Security Features:
+ Implementing advanced security measures, such as two-factor authentication for bidders and end-to-end encryption for transactions, would help further secure the platform against unauthorized access and fraud.
+●	Auction Analytics and Reports:
+ Integrating advanced analytics to track auction performance, bidder activity, and item popularity would provide valuable insights for both admins and bidders, helping them make more informed decisions in future auctions.
+●	Bidder Notifications and Alerts:
+ Implementing a customizable notification system to alert bidders when they are outbid or when an auction is about to close would enhance the user experience by keeping them informed in real time.
+●	Mobile App Development:
+ Developing a mobile application for both iOS and Android would make it easier for bidders to participate in auctions from anywhere and at any time, improving the overall accessibility and engagement.
+●	AI-Based Auction Insights:
+ Using artificial intelligence to suggest bidding strategies, identify high-value items, or recommend auctions to users based on their past activity would personalize the user experience and improve bidding success. 
+Bibliography
+1.	MongoDB Documentation
+MongoDB, Inc. (2024). MongoDB Manual. Retrieved from https://www.mongodb.com/docs
+2.	Express.js Documentation
+Express Contributors. (2024). Express.js Documentation. Retrieved from https://expressjs.com/
+3.	React Documentation
+React Contributors. (2024). React – A JavaScript library for building user interfaces. Retrieved from https://reactjs.org/
+4.	Node.js Documentation
+Node.js Foundation. (2024). Node.js Documentation. Retrieved from https://nodejs.org/en/docs/
+5.	Mongoose Documentation
+Automattic. (2024). Mongoose – MongoDB object modeling for Node.js. Retrieved from https://mongoosejs.com/
+6.	Material-UI Documentation
+Material-UI Contributors. (2024). Material-UI – React components for faster and easier web development. Retrieved from https://mui.com/
+7.	NPM Documentation
+NPM, Inc. (2024). npm Documentation. Retrieved from https://docs.npmjs.com/
+8.	Ethan Brown
+Brown, E. (2019). Web Development with Node and Express: Leveraging the JavaScript Stack (2nd ed.). O'Reilly Media.
+9.	Kirupa Chinnathambi
+Chinnathambi, K. (2018). Learning React: A Hands-On Guide to Building Web Applications Using React and Redux (2nd ed.). Addison-Wesley Professional.

@@ -6,6 +6,16 @@ import fs from 'fs'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== Similarity Check API Called ===')
+    
+    // Check if Gemini API key is configured
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is not configured')
+      return NextResponse.json({ 
+        error: 'Similarity checking service is not properly configured' 
+      }, { status: 500 })
+    }
+
     // Use direct Supabase client
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,24 +42,72 @@ export async function POST(request: NextRequest) {
     const phaseId = formData.get('phaseId') as string
     const projectId = formData.get('projectId') as string
 
+    console.log('Similarity check request received:', {
+      hasFile: !!file,
+      fileName: file?.name,
+      fileSize: file?.size,
+      phaseId,
+      projectId
+    })
+
     if (!file || !phaseId || !projectId) {
+      console.error('Missing required fields:', { file: !!file, phaseId, projectId })
       return NextResponse.json({ 
         error: 'Missing required fields: file, phaseId, or projectId' 
       }, { status: 400 })
     }
 
-    // Check if this is Phase 1 submission (only Phase 1 needs similarity check)
+    // Check if this is the initial phase (similarity check needed for the first phase by timestamp)
     const { data: phase } = await supabase
       .from('phases')
-      .select('name')
+      .select('name, created_at, department, project_id')
       .eq('id', phaseId)
       .single()
 
-    if (!phase || !phase.name.toLowerCase().includes('phase 1')) {
+    if (!phase) {
+      return NextResponse.json({ 
+        error: 'Phase not found' 
+      }, { status: 404 })
+    }
+
+    // Get all phases for the same project/department to find the earliest one
+    let allPhases
+    if (phase.project_id) {
+      // If phase is tied to a specific project
+      const { data } = await supabase
+        .from('phases')
+        .select('id, created_at')
+        .eq('project_id', phase.project_id)
+        .order('created_at', { ascending: true })
+      allPhases = data
+    } else {
+      // If phase is department-wide
+      const { data } = await supabase
+        .from('phases')
+        .select('id, created_at')
+        .eq('department', phase.department)
+        .is('project_id', null)
+        .order('created_at', { ascending: true })
+      allPhases = data
+    }
+
+    // Check if current phase is the earliest (initial) phase
+    const isInitialPhase = allPhases && allPhases.length > 0 && allPhases[0].id === phaseId
+
+    console.log('Phase analysis:', {
+      phaseName: phase.name,
+      phaseId: phaseId,
+      createdAt: phase.created_at,
+      totalPhases: allPhases?.length || 0,
+      isInitialPhase: isInitialPhase,
+      earliestPhaseId: allPhases?.[0]?.id
+    })
+
+    if (!isInitialPhase) {
       return NextResponse.json({ 
         similarityScore: 0, 
         isSimilar: false, 
-        message: 'Similarity check not required for this phase' 
+        message: 'Similarity check not required for this phase (not the initial phase)' 
       })
     }
 
@@ -91,10 +149,12 @@ export async function POST(request: NextRequest) {
     console.log(`📚 Total reference PDFs loaded: ${referencePDFBuffers.length}/2`)
 
     // Check similarity using Gemini
+    console.log('Starting Gemini similarity check...')
     const similarityResult = await geminiService.checkSimilarity(
       currentPDFBuffer, 
       referencePDFBuffers
     )
+    console.log('Gemini similarity check completed:', similarityResult)
 
     // Update the project with similarity score
     const { error: updateError } = await supabase

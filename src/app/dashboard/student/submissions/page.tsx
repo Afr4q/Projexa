@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/app/supabaseClient'
 
+interface Rubric {
+  id: string
+  name: string
+  description: string
+}
+
 interface Phase {
   id: string
   name: string
@@ -10,6 +16,7 @@ interface Phase {
   max_marks: number
   department: string
   project_id: string
+  created_at: string
   project?: {
     id: string
     title: string
@@ -34,7 +41,15 @@ interface Submission {
   marks_awarded: number | null
   late_days: number
   similarity_score: number
-  phases: PhaseInfo
+  phases: Phase
+}
+
+interface RubricValidationResult {
+  isValid: boolean
+  foundRubrics: string[]
+  missingRubrics: string[]
+  reason: string
+  message: string
 }
 
 interface UserData {
@@ -45,6 +60,19 @@ interface Project {
   id: string
   title: string
   admin_project_id: string
+  project_name?: string
+  group_id?: string
+  is_group_project: boolean
+}
+
+interface GroupMembership {
+  id: string
+  group_id: string
+  student_id: string
+  role: 'leader' | 'member'
+  project_groups: {
+    name: string
+  }
 }
 
 export default function Submissions() {
@@ -62,6 +90,31 @@ export default function Submissions() {
     explanation: string
   } | null>(null)
   const [checkingSimilarity, setCheckingSimilarity] = useState(false)
+  const [rubricValidationResult, setRubricValidationResult] = useState<RubricValidationResult | null>(null)
+  const [validatingRubrics, setValidatingRubrics] = useState(false)
+  const [isResubmission, setIsResubmission] = useState(false)
+  const [resubmissionReason, setResubmissionReason] = useState<string>('')
+  const [groupMembership, setGroupMembership] = useState<GroupMembership | null>(null)
+  const [canSubmit, setCanSubmit] = useState(true)
+  const [groupPermissions, setGroupPermissions] = useState({
+    canSubmit: true,
+    isLeader: false,
+    groupName: null as string | null
+  })
+  const [phaseRubrics, setPhaseRubrics] = useState<Rubric[]>([])
+  const [loadingRubrics, setLoadingRubrics] = useState(false)
+
+  // Helper function to check if a phase is the initial phase (earliest by timestamp)
+  const isInitialPhase = (phase: Phase, allPhases: Phase[]) => {
+    if (!allPhases || allPhases.length === 0) return false
+    
+    // Sort phases by creation time and check if this is the first one
+    const sortedPhases = [...allPhases].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )
+    
+    return sortedPhases[0]?.id === phase.id
+  }
 
   // Add function to handle resubmission
   const handleResubmit = (submission: Submission) => {
@@ -77,16 +130,21 @@ export default function Submissions() {
       setSelectedProject(project)
     }
     
-    // Reset form state
-    setFile(null)
-    setSimilarityResult(null)
+    // Set resubmission state
+    setIsResubmission(true)
     
-    // Show resubmission context
+    // Determine and store resubmission reason
     const reason = submission.guide_status === 'rejected' 
       ? 'Submission was rejected by guide' 
       : submission.similarity_score >= 40 
         ? `High similarity detected (${submission.similarity_score}%)`
         : 'Resubmission requested'
+    
+    setResubmissionReason(reason)
+    
+    // Reset form state
+    setFile(null)
+    setSimilarityResult(null)
     
     alert(`Resubmitting due to: ${reason}\n\nPlease upload your revised submission. For Phase 1, plagiarism check will be performed again.`)
     
@@ -107,7 +165,7 @@ export default function Submissions() {
 
       const { data, error } = await supabase
         .from('projects')
-        .select('id, title, admin_project_id')
+        .select('id, title, admin_project_id, project_name, group_id, is_group_project')
         .eq('student_id', user.id)
         .order('title', { ascending: true })
 
@@ -116,6 +174,72 @@ export default function Submissions() {
     } catch (error) {
       console.error('Error fetching projects:', error)
       setProjects([])
+    }
+  }
+
+  const checkGroupPermissions = async (project: Project) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // If it's not a group project, user can submit
+      if (!project.is_group_project || !project.group_id) {
+        setCanSubmit(true)
+        setGroupMembership(null)
+        setGroupPermissions({
+          canSubmit: true,
+          isLeader: false,
+          groupName: null
+        })
+        return
+      }
+
+      // Check if user is in the group and their role
+      const { data: membership, error } = await supabase
+        .from('group_members')
+        .select(`
+          id,
+          group_id,
+          student_id,
+          role,
+          project_groups (name)
+        `)
+        .eq('group_id', project.group_id)
+        .eq('student_id', user.id)
+        .single()
+
+      if (error) {
+        console.error('Error checking group membership:', error)
+        setCanSubmit(false)
+        setGroupMembership(null)
+        setGroupPermissions({
+          canSubmit: false,
+          isLeader: false,
+          groupName: null
+        })
+        return
+      }
+
+      setGroupMembership(membership)
+      
+      // Only group leaders can submit (you can change this logic)
+      const isLeader = membership.role === 'leader'
+      const groupName = membership.project_groups?.name || null
+      
+      setCanSubmit(isLeader)
+      setGroupPermissions({
+        canSubmit: isLeader,
+        isLeader: isLeader,
+        groupName: groupName
+      })
+    } catch (error) {
+      console.error('Error checking group permissions:', error)
+      setCanSubmit(false)
+      setGroupPermissions({
+        canSubmit: false,
+        isLeader: false,
+        groupName: null
+      })
     }
   }
 
@@ -147,6 +271,8 @@ export default function Submissions() {
           project:admin_projects(id, title)
         `)
         .eq('department', userData.department)
+        .or(`project_id.eq.${project.admin_project_id},project_id.is.null`)
+        .order('created_at', { ascending: true }) // Order by creation time to identify initial phase
         .eq('project_id', project.admin_project_id)
         .order('deadline', { ascending: true })
 
@@ -211,9 +337,13 @@ export default function Submissions() {
         .select(`
           *,
           phases (
+            id,
             name,
             deadline,
-            max_marks
+            max_marks,
+            created_at,
+            department,
+            project_id
           )
         `)
         .eq('student_id', user.id)
@@ -243,8 +373,44 @@ export default function Submissions() {
     setSelectedPhase(null) // Reset selected phase when project changes
     setPhases([]) // Clear phases
     
+    // Reset resubmission state when manually changing project
+    setIsResubmission(false)
+    setResubmissionReason('')
+    
     if (project) {
       fetchPhases(project.id)
+      checkGroupPermissions(project)
+    } else {
+      setCanSubmit(true)
+      setGroupMembership(null)
+      setGroupPermissions({
+        canSubmit: true,
+        isLeader: false,
+        groupName: null
+      })
+    }
+  }
+
+  const fetchPhaseRubrics = async (phaseId: string) => {
+    try {
+      setLoadingRubrics(true)
+      const { data: rubrics, error } = await supabase
+        .from('rubrics')
+        .select('id, name, description')
+        .eq('phase_id', phaseId)
+        .order('name')
+
+      if (error) {
+        console.error('Error fetching rubrics:', error)
+        setPhaseRubrics([])
+      } else {
+        setPhaseRubrics(rubrics || [])
+      }
+    } catch (error) {
+      console.error('Error fetching rubrics:', error)
+      setPhaseRubrics([])
+    } finally {
+      setLoadingRubrics(false)
     }
   }
 
@@ -252,6 +418,17 @@ export default function Submissions() {
     const phaseId = e.target.value
     const phase = phases.find((p) => p.id === phaseId)
     setSelectedPhase(phase || null)
+    
+    // Reset resubmission state when manually changing phase
+    setIsResubmission(false)
+    setResubmissionReason('')
+    
+    // Fetch rubrics for the selected phase
+    if (phaseId && phase) {
+      fetchPhaseRubrics(phaseId)
+    } else {
+      setPhaseRubrics([])
+    }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,7 +459,7 @@ export default function Submissions() {
 
       // Allow resubmission for rejected submissions OR high similarity pending submissions
       if (existingSubmission) {
-        const isPhase1 = selectedPhase.name.toLowerCase().includes('phase 1')
+        const isPhase1 = isInitialPhase(selectedPhase, phases)
         const isRejected = existingSubmission.guide_status === 'rejected'
         const wasRejectedForSimilarity = isPhase1 && 
                                        existingSubmission.guide_status === 'pending' && 
@@ -301,8 +478,66 @@ export default function Submissions() {
           .eq('id', existingSubmission.id)
       }
 
-      // Check if this is Phase 1 - perform similarity check
-      if (selectedPhase.name.toLowerCase().includes('phase 1')) {
+      // Step 1: Validate rubrics for all phases
+      setValidatingRubrics(true)
+      try {
+        console.log('Starting rubric validation...')
+        
+        const rubricFormData = new FormData()
+        rubricFormData.append('file', file)
+        rubricFormData.append('phaseId', selectedPhase.id)
+
+        // Get the current session token
+        const { data: { session } } = await supabase.auth.getSession()
+        const accessToken = session?.access_token
+
+        const rubricResponse = await fetch('/api/validate-rubrics', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: rubricFormData
+        })
+
+        if (!rubricResponse.ok) {
+          const errorText = await rubricResponse.text()
+          console.error('Rubric validation failed:', errorText)
+          throw new Error(`Failed to validate rubrics: ${rubricResponse.status} ${rubricResponse.statusText}`)
+        }
+
+        const rubricResult = await rubricResponse.json()
+        console.log('Rubric validation result:', rubricResult)
+        setRubricValidationResult(rubricResult)
+
+        setValidatingRubrics(false)
+
+        // If rubric validation fails, stop the submission process
+        if (!rubricResult.isValid) {
+          alert(`Submission rejected!\n\nReason: ${rubricResult.reason}\n\nMissing sections: ${rubricResult.missingRubrics.join(', ')}\n\nPlease ensure your PDF contains all required sections according to the rubrics.`)
+          setLoading(false)
+          return
+        }
+
+        // Show success message for rubric validation
+        console.log('✅ Rubric validation passed:', rubricResult.message)
+        
+      } catch (rubricError) {
+        console.error('Rubric validation failed:', rubricError)
+        setValidatingRubrics(false)
+        // Ask user if they want to proceed without rubric validation
+        const proceed = confirm('Rubric validation failed. Do you want to proceed with submission anyway? Note: This may result in automatic rejection.')
+        if (!proceed) {
+          setLoading(false)
+          return
+        }
+      }
+
+      // Step 2: Check if this is initial phase - perform similarity check
+      const isInitial = isInitialPhase(selectedPhase, phases)
+                            
+      console.log('Selected phase:', selectedPhase.name, '- Is initial phase:', isInitial)
+      
+      if (isInitial) {
         setCheckingSimilarity(true)
         
         try {
@@ -388,7 +623,11 @@ export default function Submissions() {
       // Store just the file path, we'll generate signed URLs when viewing
       const filePath = `project files/${fileName}`
       
-      // Create submission record with similarity score
+      // Determine rubric check status based on validation result
+      const rubricStatus = rubricValidationResult?.isValid === true ? 'passed' : 
+                          rubricValidationResult?.isValid === false ? 'failed' : 'pending'
+
+      // Create submission record with similarity score and rubric validation status
       const { error: submissionError } = await supabase
         .from('submissions')
         .insert({
@@ -397,7 +636,7 @@ export default function Submissions() {
           phase_id: selectedPhase.id,
           file_url: filePath,
           submission_date: new Date().toISOString(),
-          rubric_check_status: 'pending',
+          rubric_check_status: rubricStatus,
           guide_status: 'pending',
           similarity_score: similarityResult?.score || 0
         })
@@ -410,6 +649,9 @@ export default function Submissions() {
       setSelectedProject(null)
       setPhases([])
       setSimilarityResult(null)
+      setRubricValidationResult(null)
+      setIsResubmission(false)
+      setResubmissionReason('')
       const form = e.target as HTMLFormElement
       form.reset()
       await fetchSubmissions()
@@ -427,6 +669,7 @@ export default function Submissions() {
     } finally {
       setLoading(false)
       setCheckingSimilarity(false)
+      setValidatingRubrics(false)
     }
   }
 
@@ -456,12 +699,18 @@ export default function Submissions() {
           <div className="ml-3">
             <h2 className="text-xl font-semibold text-gray-900">New Submission</h2>
             <p className="text-sm text-gray-600">Upload your project submission for review</p>
-            {selectedPhase && selectedProject && (
+            {isResubmission && selectedPhase && selectedProject && (
               <div className="mt-2 space-y-1">
                 <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-md inline-block">
                   ⚠️ Resubmitting for {selectedPhase.name} - {selectedProject.title}
+                  {selectedProject.project_name && ` (${selectedProject.project_name})`}
                 </div>
-                {selectedPhase.name.toLowerCase().includes('phase 1') && (
+                {resubmissionReason && (
+                  <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-md inline-block ml-2">
+                    Reason: {resubmissionReason}
+                  </div>
+                )}
+                {isInitialPhase(selectedPhase, phases) && (
                   <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md inline-block ml-2">
                     🔍 Plagiarism check will be performed
                   </div>
@@ -488,11 +737,38 @@ export default function Submissions() {
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.title}
+                    {project.project_name && ` - ${project.project_name}`}
                   </option>
                 ))}
               </select>
               {projects.length === 0 && (
                 <p className="mt-1 text-sm text-amber-600">No projects assigned. Please contact your admin.</p>
+              )}
+              {selectedProject?.project_name && (
+                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center text-sm">
+                    <svg className="w-4 h-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a.997.997 0 01-1.414 0l-7-7A1.997 1.997 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    <span className="text-blue-800 font-medium">Project Name: </span>
+                    <span className="text-blue-700 ml-1">{selectedProject.project_name}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Group submission warning */}
+              {selectedProject?.is_group_project && !groupPermissions.canSubmit && (
+                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <div className="flex items-center text-sm text-yellow-800">
+                    <svg className="w-4 h-4 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.864-.833-2.634 0l-7.898 8.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div>
+                      <p className="font-medium">Group Project - Limited Access</p>
+                      <p className="text-xs mt-1">Only the group leader can make submissions for this project. You are a group member.</p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -504,7 +780,7 @@ export default function Submissions() {
               <select
                 value={selectedPhase?.id || ''}
                 onChange={handlePhaseChange}
-                disabled={!selectedProject}
+                disabled={!selectedProject || (selectedProject?.is_group_project && !groupPermissions.canSubmit)}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 required
               >
@@ -522,20 +798,62 @@ export default function Submissions() {
 
           {/* Phase Info Display */}
           {selectedPhase && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-blue-800">Deadline:</span>
-                  <p className="text-blue-700">{new Date(selectedPhase.deadline).toLocaleDateString()} at {new Date(selectedPhase.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-blue-800">Deadline:</span>
+                    <p className="text-blue-700">{new Date(selectedPhase.deadline).toLocaleDateString()} at {new Date(selectedPhase.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-800">Max Marks:</span>
+                    <p className="text-blue-700">{selectedPhase.max_marks} points</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-800">Project:</span>
+                    <p className="text-blue-700">{selectedProject?.title}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-medium text-blue-800">Max Marks:</span>
-                  <p className="text-blue-700">{selectedPhase.max_marks} points</p>
+              </div>
+
+              {/* Phase Rubrics */}
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <div className="flex items-center mb-3">
+                  <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h4 className="font-medium text-green-800">Required Sections for {selectedPhase.name}</h4>
                 </div>
-                <div>
-                  <span className="font-medium text-blue-800">Project:</span>
-                  <p className="text-blue-700">{selectedProject?.title}</p>
-                </div>
+                
+                {loadingRubrics ? (
+                  <div className="flex items-center text-sm text-green-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
+                    Loading requirements...
+                  </div>
+                ) : phaseRubrics.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-green-700 mb-3">
+                      Your PDF submission must include the following sections:
+                    </p>
+                    <ul className="space-y-2">
+                      {phaseRubrics.map((rubric, index) => (
+                        <li key={rubric.id} className="flex items-start">
+                          <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium text-green-800 bg-green-100 rounded-full mr-3 mt-0.5 flex-shrink-0">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <p className="font-medium text-green-800 text-sm">{rubric.name}</p>
+                            <p className="text-sm text-green-700 mt-1">{rubric.description}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-sm text-green-700">
+                    No specific rubrics defined for this phase. Please follow general submission guidelines.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -545,7 +863,11 @@ export default function Submissions() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Upload PDF Document <span className="text-red-500">*</span>
             </label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-indigo-400 transition-colors bg-gray-50 hover:bg-gray-100">
+            <div className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
+              (selectedProject?.is_group_project && !groupPermissions.canSubmit)
+                ? 'border-gray-200 bg-gray-100 cursor-not-allowed'
+                : 'border-gray-300 hover:border-indigo-400 bg-gray-50 hover:bg-gray-100'
+            }`}>
               <div className="space-y-1 text-center">
                 <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -557,6 +879,7 @@ export default function Submissions() {
                       type="file"
                       accept=".pdf"
                       onChange={handleFileChange}
+                      disabled={selectedProject?.is_group_project && !groupPermissions.canSubmit}
                       className="sr-only"
                       required
                     />
@@ -577,6 +900,72 @@ export default function Submissions() {
               </div>
             </div>
           </div>
+
+          {/* Rubric Validation Results */}
+          {validatingRubrics && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">Validating Rubrics</h3>
+                  <p className="text-sm text-blue-600">Checking if your submission contains required sections...</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {rubricValidationResult && (
+            <div className={`border rounded-md p-4 ${
+              rubricValidationResult.isValid 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-red-50 border-red-200'
+            }`}>
+              <div className="flex items-start">
+                <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 mr-3 ${
+                  rubricValidationResult.isValid ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                  {rubricValidationResult.isValid ? (
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className={`text-sm font-medium ${
+                    rubricValidationResult.isValid ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    Rubric Validation: {rubricValidationResult.isValid ? 'Passed' : 'Failed'}
+                  </h3>
+                  <p className={`text-sm mt-1 ${
+                    rubricValidationResult.isValid ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {rubricValidationResult.message}
+                  </p>
+                  {rubricValidationResult.foundRubrics.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs text-green-700">
+                        <strong>✅ Found sections:</strong> {rubricValidationResult.foundRubrics.join(', ')}
+                      </p>
+                    </div>
+                  )}
+                  {!rubricValidationResult.isValid && (
+                    <div className="mt-3 p-3 bg-red-100 rounded-md">
+                      <p className="text-sm text-red-800">
+                        <strong>❌ Missing Required Sections:</strong> {rubricValidationResult.missingRubrics.join(', ')}
+                      </p>
+                      <p className="text-xs text-red-700 mt-1">
+                        Please ensure your PDF contains all required sections according to the phase rubrics.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Similarity Check Results */}
           {checkingSimilarity && (
@@ -644,9 +1033,9 @@ export default function Submissions() {
           <div className="flex justify-end pt-4 border-t border-gray-200">
             <button
               type="submit"
-              disabled={loading || !file || !selectedPhase || !selectedProject || checkingSimilarity || (similarityResult?.isSimilar)}
+              disabled={loading || !file || !selectedPhase || !selectedProject || validatingRubrics || checkingSimilarity || (rubricValidationResult?.isValid === false) || (similarityResult?.isSimilar) || (selectedProject?.is_group_project && !groupPermissions.canSubmit)}
               className={`px-6 py-3 rounded-md font-medium text-white transition-colors duration-200 ${
-                loading || !file || !selectedPhase || !selectedProject || checkingSimilarity || (similarityResult?.isSimilar)
+                loading || !file || !selectedPhase || !selectedProject || validatingRubrics || checkingSimilarity || (rubricValidationResult?.isValid === false) || (similarityResult?.isSimilar) || (selectedProject?.is_group_project && !groupPermissions.canSubmit)
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
               }`}
@@ -656,6 +1045,11 @@ export default function Submissions() {
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Uploading...
                 </div>
+              ) : validatingRubrics ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Validating Rubrics...
+                </div>
               ) : checkingSimilarity ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -663,6 +1057,8 @@ export default function Submissions() {
                 </div>
               ) : similarityResult?.isSimilar ? (
                 'Submission Blocked - Contact Guide'
+              ) : (selectedProject?.is_group_project && !groupPermissions.canSubmit) ? (
+                'Only Group Leader Can Submit'
               ) : (
                 'Submit Assignment'
               )}
@@ -782,9 +1178,9 @@ export default function Submissions() {
                         >
                           View PDF
                         </button>
-                        {/* Show resubmit option for rejected submissions OR Phase 1 submissions with high similarity */}
+                        {/* Show resubmit option for rejected submissions OR initial phase submissions with high similarity */}
                         {((submission.guide_status === 'rejected') || 
-                          (submission.phases?.name?.toLowerCase().includes('phase 1') && 
+                          (submission.phases && isInitialPhase(submission.phases, phases) &&
                            submission.guide_status === 'pending' && 
                            submission.similarity_score >= 40)) && (
                           <button

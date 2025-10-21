@@ -19,6 +19,8 @@ export default function ManageUsers() {
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<User[]>([])
   const [adminDepartment, setAdminDepartment] = useState<string | null>(null)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     name: '',
@@ -159,6 +161,179 @@ export default function ManageUsers() {
     }
   }
 
+  const handleEditUser = (user: User) => {
+    setEditingUser(user)
+    setIsEditing(true)
+    setFormData({
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      specialization: user.specialization || '',
+      year: user.year || 1,
+      semester: user.semester || 1,
+      password: '' // Don't pre-fill password for security
+    })
+  }
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!editingUser || !adminDepartment) {
+      alert('Error: No user selected for editing')
+      return
+    }
+
+    // Validate form data (password not required for updates)
+    if (!formData.email || !formData.email.includes('@')) {
+      alert('Please enter a valid email address')
+      return
+    }
+    if (!formData.name || formData.name.trim().length < 2) {
+      alert('Please enter a valid name (at least 2 characters)')
+      return
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      name: formData.name.trim(),
+      email: formData.email,
+      role: formData.role,
+      department: adminDepartment
+    }
+
+    // Add role-specific fields
+    if (formData.role === 'student') {
+      updateData.year = formData.year
+      updateData.semester = formData.semester
+      updateData.specialization = null // Clear specialization for students
+    } else if (formData.role === 'guide') {
+      updateData.specialization = formData.specialization.trim() || null
+      updateData.year = null // Clear year/semester for guides
+      updateData.semester = null
+    } else {
+      // Admin role
+      updateData.specialization = null
+      updateData.year = null
+      updateData.semester = null
+    }
+
+    // Include password if provided
+    if (formData.password.trim()) {
+      if (formData.password.length < 6) {
+        alert('Password must be at least 6 characters')
+        return
+      }
+      updateData.password = formData.password
+    }
+
+    try {
+      setLoading(true)
+      
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', editingUser.id)
+
+      if (error) throw error
+
+      // If password was provided, update it via Supabase Auth (requires admin privileges)
+      if (formData.password.trim()) {
+        try {
+          const { error: passwordError } = await supabase.auth.admin.updateUserById(
+            editingUser.id,
+            { password: formData.password }
+          )
+          
+          if (passwordError) {
+            console.warn('Password update failed:', passwordError)
+            alert('User updated successfully, but password update failed. The user may need to reset their password.')
+          }
+        } catch (passwordError) {
+          console.warn('Password update failed:', passwordError)
+          alert('User updated successfully, but password update failed. The user may need to reset their password.')
+        }
+      }
+
+      // Reset form and refresh list
+      setFormData({
+        email: '',
+        name: '',
+        role: 'student',
+        specialization: '',
+        year: 1,
+        semester: 1,
+        password: ''
+      })
+      setEditingUser(null)
+      setIsEditing(false)
+      fetchUsers(adminDepartment)
+      alert('User updated successfully!')
+    } catch (error) {
+      console.error('Error updating user:', error)
+      if (error instanceof Error) {
+        alert(`Error updating user: ${error.message}`)
+      } else {
+        alert('Error updating user. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingUser(null)
+    setIsEditing(false)
+    setFormData({
+      email: '',
+      name: '',
+      role: 'student',
+      specialization: '',
+      year: 1,
+      semester: 1,
+      password: ''
+    })
+  }
+
+  const handleDeleteUser = async (user: User) => {
+    if (!confirm(`Are you sure you want to delete user "${user.name}" (${user.email})? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      // Delete from users table
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      // Try to delete from Supabase Auth (may fail if admin doesn't have permission)
+      try {
+        const { error: authError } = await supabase.auth.admin.deleteUser(user.id)
+        if (authError) {
+          console.warn('Auth user deletion failed:', authError)
+        }
+      } catch (authError) {
+        console.warn('Auth user deletion failed:', authError)
+      }
+
+      fetchUsers(adminDepartment!)
+      alert('User deleted successfully!')
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      if (error instanceof Error) {
+        alert(`Error deleting user: ${error.message}`)
+      } else {
+        alert('Error deleting user. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (loading && !adminDepartment) {
     return (
       <div className="p-6">
@@ -182,10 +357,12 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* Add User Form */}
+      {/* Add/Edit User Form */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Add New User</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <h2 className="text-xl font-semibold mb-4">
+          {isEditing ? `Edit User: ${editingUser?.name}` : 'Add New User'}
+        </h2>
+        <form onSubmit={isEditing ? handleUpdateUser : handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -243,16 +420,17 @@ export default function ManageUsers() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password <span className="text-red-500">*</span>
+                Password {!isEditing && <span className="text-red-500">*</span>}
+                {isEditing && <span className="text-sm text-gray-500">(leave blank to keep current)</span>}
               </label>
               <input
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 bg-white text-gray-900"
-                required
+                required={!isEditing}
                 minLength={6}
-                placeholder="Minimum 6 characters"
+                placeholder={isEditing ? "Leave blank to keep current password" : "Minimum 6 characters"}
               />
             </div>
           </div>
@@ -307,11 +485,11 @@ export default function ManageUsers() {
             </div>
           )}
 
-          <div className="pt-4">
+          <div className="pt-4 flex gap-2">
             <button
               type="submit"
               disabled={loading}
-              className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
+              className={`flex-1 flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
                 ${loading 
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
@@ -320,12 +498,23 @@ export default function ManageUsers() {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating User...
+                  {isEditing ? 'Updating User...' : 'Creating User...'}
                 </div>
               ) : (
-                'Add User'
+                isEditing ? 'Update User' : 'Add User'
               )}
             </button>
+            
+            {isEditing && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={loading}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -340,6 +529,7 @@ export default function ManageUsers() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year/Semester</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Specialization</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -373,11 +563,31 @@ export default function ManageUsers() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{user.specialization || '-'}</div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        disabled={loading}
+                        className="text-indigo-600 hover:text-indigo-900 disabled:opacity-50"
+                        title="Edit user"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={loading}
+                        className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                        title="Delete user"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center">
+                <td colSpan={6} className="px-6 py-8 text-center">
                   <div className="text-gray-500">
                     <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />

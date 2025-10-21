@@ -21,6 +21,7 @@ interface Project {
   description: string
   status: string
   created_at: string
+  project_name?: string
   student: Student
   latest_submission?: Submission[]
 }
@@ -98,6 +99,16 @@ export default function AssignedProjects() {
               <div key={project.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="mb-4">
                   <h3 className="font-medium text-lg">{project.title}</h3>
+                  {project.project_name && (
+                    <div className="mt-1 flex items-center">
+                      <svg className="w-4 h-4 text-blue-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a.997.997 0 01-1.414 0l-7-7A1.997 1.997 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      <span className="text-blue-700 text-sm font-medium bg-blue-50 px-2 py-1 rounded">
+                        {project.project_name}
+                      </span>
+                    </div>
+                  )}
                   <p className="text-gray-600 text-sm line-clamp-2 mt-2">
                     {project.description}
                   </p>

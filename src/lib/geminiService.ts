@@ -3,6 +3,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
+// Check if API key is available
+if (!process.env.GEMINI_API_KEY) {
+  console.error('GEMINI_API_KEY environment variable is not set')
+}
+
 interface SimilarityResult {
   similarityScore: number
   explanation: string

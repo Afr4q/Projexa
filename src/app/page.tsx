@@ -17,6 +17,23 @@ export default function Home() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Client-side validation
+    if (!formData.email.trim()) {
+      setError('Please enter your email address.')
+      return
+    }
+    
+    if (!formData.password.trim()) {
+      setError('Please enter your password.')
+      return
+    }
+    
+    if (!formData.email.includes('@')) {
+      setError('Please enter a valid email address.')
+      return
+    }
+    
     try {
       setLoading(true)
       setError(null)
@@ -28,8 +45,29 @@ export default function Home() {
       })
 
       if (authError) {
-        console.error('Authentication error:', authError)
-        throw authError
+        // Provide user-friendly error messages
+        let errorMessage = 'Sign in failed. Please try again.'
+        
+        if (authError.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.'
+          // Don't log this as it's expected user error
+        } else if (authError.message.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and confirm your account before signing in.'
+          // Don't log this as it's expected user error
+        } else if (authError.message.includes('Too many requests')) {
+          errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.'
+          // Don't log this as it's expected user error
+        } else if (authError.message.includes('User not found')) {
+          errorMessage = 'No account found with this email address.'
+          // Don't log this as it's expected user error
+        } else {
+          // Log only unexpected auth errors
+          console.error('Unexpected authentication error:', authError)
+        }
+        
+        setError(errorMessage)
+        setLoading(false)
+        return
       }
 
       if (!session?.user) {
@@ -47,12 +85,16 @@ export default function Home() {
 
       if (userError) {
         console.error('Error fetching user role:', userError)
-        throw userError
+        setError('Unable to retrieve user information. Please contact administrator.')
+        setLoading(false)
+        return
       }
 
       if (!userData) {
-        console.error('No user data found')
-        throw new Error('User role not found')
+        console.warn('No user data found for user:', session.user.id)
+        setError('User profile not found. Please contact administrator to set up your account.')
+        setLoading(false)
+        return
       }
 
       const userRole = userData as UserRole
@@ -70,17 +112,32 @@ export default function Home() {
           redirectPath = '/dashboard/guide'
           break
         default:
-          throw new Error('Invalid role')
+          setError('Invalid user role. Please contact administrator.')
+          setLoading(false)
+          return
       }
 
       console.log('Redirecting to:', redirectPath)
       window.location.href = redirectPath
     } catch (error) {
       console.error('Login error:', error)
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      // If we reach here, it's an unexpected error
+      if (error instanceof Error) {
+        setError(`Unexpected error: ${error.message}. Please try again or contact support.`)
+      } else {
+        setError('An unexpected error occurred. Please try again or contact support.')
+      }
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleInputChange = (field: 'email' | 'password', value: string) => {
+    // Clear error when user starts typing
+    if (error) {
+      setError(null)
+    }
+    setFormData({ ...formData, [field]: value })
   }
 
   return (
@@ -98,7 +155,8 @@ export default function Home() {
             type="email"
             placeholder="Email"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            disabled={loading}
             required
           />
         </div>
@@ -114,18 +172,23 @@ export default function Home() {
             type="password"
             placeholder="Password"
             value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            onChange={(e) => handleInputChange('password', e.target.value)}
+            disabled={loading}
             required
           />
         </div>
         {error && <p className={styles.errorMessage}>{error}</p>}
         <button className={styles.submitButton} type="submit" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <span className={styles.spinner}></span>
+              Signing in...
+            </span>
+          ) : (
+            'Sign In'
+          )}
         </button>
       </form>
-      <a href="#" className={styles.forgotPassword}>
-        Forgot password?
-      </a>
     </div>
   )
 }

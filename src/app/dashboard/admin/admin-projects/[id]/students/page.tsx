@@ -16,7 +16,7 @@ interface Student {
     id: string
     name: string
     email: string
-  }
+  } | undefined
 }
 
 interface Guide {
@@ -48,6 +48,22 @@ export default function ProjectStudentsPage({ params }: { params: Promise<{ id: 
 
   const fetchProjectAndStudents = async () => {
     try {
+      console.log('Fetching project with ID:', resolvedParams.id)
+      
+      // Check if we can access admin_projects table at all
+      const { data: allProjects, error: allProjectsError } = await supabase
+        .from('admin_projects')
+        .select('id, title')
+        .limit(1)
+
+      if (allProjectsError) {
+        console.error('Cannot access admin_projects table:', allProjectsError)
+        alert('Error: Cannot access admin projects. Please check your permissions.')
+        return
+      }
+
+      console.log('Can access admin_projects table. Sample data:', allProjects)
+
       // Fetch admin project details
       const { data: projectData, error: projectError } = await supabase
         .from('admin_projects')
@@ -55,49 +71,160 @@ export default function ProjectStudentsPage({ params }: { params: Promise<{ id: 
         .eq('id', resolvedParams.id)
         .single()
 
-      if (projectError) throw projectError
+      if (projectError) {
+        console.error('Project fetch error details:', {
+          error: projectError,
+          message: projectError.message,
+          details: projectError.details,
+          hint: projectError.hint,
+          code: projectError.code
+        })
+        
+        if (projectError.code === 'PGRST116') {
+          alert('Project not found. Please check if the project ID is correct.')
+          return
+        }
+        
+        throw new Error(`Failed to fetch project: ${projectError.message || 'Unknown error'}`)
+      }
+
+      console.log('Project data:', projectData)
       setAdminProject(projectData)
 
-      // Fetch students assigned to this project with their current guide info
-      const { data: studentsData, error: studentsError } = await supabase
+      // Check if we can access projects table
+      const { data: allUserProjects, error: allUserProjectsError } = await supabase
         .from('projects')
-        .select(`
-          id,
-          student_id,
-          guide_id,
-          users!student_id (
-            id,
-            name,
-            email,
-            department
-          ),
-          guides:users!guide_id (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('id, admin_project_id')
+        .limit(1)
+
+      if (allUserProjectsError) {
+        console.error('Cannot access projects table:', allUserProjectsError)
+        alert('Error: Cannot access projects table. Please check your permissions.')
+        return
+      }
+
+      console.log('Can access projects table. Sample data:', allUserProjects)
+
+      // First, let's try a simple query to see if basic projects fetching works
+      const { data: basicProjectsData, error: basicError } = await supabase
+        .from('projects')
+        .select('*')
         .eq('admin_project_id', resolvedParams.id)
 
-      if (studentsError) throw studentsError
+      if (basicError) {
+        console.error('Basic projects fetch error details:', {
+          error: basicError,
+          message: basicError.message,
+          details: basicError.details,
+          hint: basicError.hint,
+          code: basicError.code
+        })
+        throw new Error(`Failed to fetch projects: ${basicError.message || 'Unknown error'}`)
+      }
 
-      const formattedStudents: Student[] = studentsData.map((project: any) => ({
-        id: project.student_id,
-        name: project.users.name,
-        email: project.users.email,
-        department: project.users.department,
-        project_id: project.id,
-        guide_id: project.guide_id,
-        guide: project.guides ? {
-          id: project.guides.id,
-          name: project.guides.name,
-          email: project.guides.email
-        } : undefined
-      }))
+      console.log('Basic projects data:', basicProjectsData)
 
-      setStudents(formattedStudents)
+      // Now try to fetch students with a simpler approach
+      if (basicProjectsData && basicProjectsData.length > 0) {
+        const studentIds = basicProjectsData.map(p => p.student_id).filter(Boolean)
+        console.log('Student IDs to fetch:', studentIds)
+        
+        if (studentIds.length === 0) {
+          console.log('No students found for this project')
+          setStudents([])
+          return
+        }
+        
+        const { data: studentsData, error: studentsError } = await supabase
+          .from('users')
+          .select('id, name, email, department')
+          .in('id', studentIds)
+
+        if (studentsError) {
+          console.error('Students fetch error details:', {
+            error: studentsError,
+            message: studentsError.message,
+            details: studentsError.details,
+            hint: studentsError.hint,
+            code: studentsError.code
+          })
+          throw new Error(`Failed to fetch students: ${studentsError.message || 'Unknown error'}`)
+        }
+
+        console.log('Students data:', studentsData)
+
+        // Combine the data manually
+        const formattedStudents: Student[] = basicProjectsData.map((project: any) => {
+          const student = studentsData.find(s => s.id === project.student_id)
+          return {
+            id: project.student_id,
+            name: student?.name || 'Unknown',
+            email: student?.email || 'Unknown',
+            department: student?.department || 'Unknown',
+            project_id: project.id,
+            guide_id: project.guide_id,
+            guide: undefined // We'll fetch guides separately if needed
+          }
+        }).filter(s => s.name !== 'Unknown') // Filter out any invalid entries
+
+        console.log('Formatted students:', formattedStudents)
+        setStudents(formattedStudents)
+
+        // Fetch guide information for students who have guides assigned
+        const guideIds = basicProjectsData.map(p => p.guide_id).filter(Boolean)
+        if (guideIds.length > 0) {
+          console.log('Guide IDs to fetch:', guideIds)
+          
+          const { data: guidesData, error: guidesError } = await supabase
+            .from('users')
+            .select('id, name, email')
+            .in('id', guideIds)
+
+          if (!guidesError && guidesData) {
+            console.log('Guides data:', guidesData)
+            
+            // Update students with guide information
+            const updatedStudents = formattedStudents.map(student => {
+              const project = basicProjectsData.find(p => p.id === student.project_id)
+              if (project?.guide_id) {
+                const guide = guidesData.find(g => g.id === project.guide_id)
+                if (guide) {
+                  return {
+                    ...student,
+                    guide: {
+                      id: guide.id,
+                      name: guide.name,
+                      email: guide.email
+                    }
+                  }
+                }
+              }
+              return student
+            })
+            setStudents(updatedStudents)
+          } else if (guidesError) {
+            console.error('Guides fetch error:', guidesError)
+            // Don't throw error here, just continue without guide info
+          }
+        }
+      } else {
+        console.log('No projects found for admin_project_id:', resolvedParams.id)
+        setStudents([])
+      }
     } catch (error) {
       console.error('Error fetching project and students:', error)
+      console.error('Error type:', typeof error)
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      })
+      
+      // Show user-friendly error message
+      if (error instanceof Error) {
+        alert(`Error: ${error.message}`)
+      } else {
+        alert('An unexpected error occurred. Please check the console for details.')
+      }
     } finally {
       setLoading(false)
     }
@@ -198,15 +325,37 @@ export default function ProjectStudentsPage({ params }: { params: Promise<{ id: 
         </Link>
         
         <div className="border-b border-gray-200 pb-6">
-          <h1 className="text-3xl font-bold text-gray-900">{adminProject.title}</h1>
-          <p className="mt-2 text-gray-600">{adminProject.description}</p>
-          <div className="mt-4 flex items-center space-x-4">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              {adminProject.department}
-            </span>
-            <span className="text-sm text-gray-500">
-              {students.length} student{students.length !== 1 ? 's' : ''} assigned
-            </span>
+          <div className="flex items-start justify-between">
+            <div>
+              <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+                <Link href="/dashboard/admin/admin-projects" className="hover:text-gray-700">
+                  Admin Projects
+                </Link>
+                <span>/</span>
+                <span className="text-gray-900">{adminProject.title}</span>
+              </nav>
+              <h1 className="text-3xl font-bold text-gray-900">{adminProject.title}</h1>
+              <p className="mt-2 text-gray-600">{adminProject.description}</p>
+              <div className="mt-4 flex items-center space-x-4">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  {adminProject.department}
+                </span>
+                <span className="text-sm text-gray-500">
+                  {students.length} student{students.length !== 1 ? 's' : ''} assigned
+                </span>
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <Link
+                href={`/dashboard/admin/admin-projects/${resolvedParams.id}/groups`}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Manage Groups
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -252,7 +401,7 @@ export default function ProjectStudentsPage({ params }: { params: Promise<{ id: 
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {students.map((student) => (
-                  <tr key={student.id} className="hover:bg-gray-50">
+                  <tr key={`${student.id}-${student.project_id}`} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{student.name}</div>

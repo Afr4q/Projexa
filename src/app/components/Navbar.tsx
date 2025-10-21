@@ -59,15 +59,19 @@ export default function Navbar() {
 
   // Get current page title based on pathname
   const getPageTitle = () => {
+    if (pathname.includes('/dashboard/admin/admin-projects/') && pathname.includes('/students')) return 'Students Management'
+    if (pathname.includes('/dashboard/admin/admin-projects/') && pathname.includes('/groups')) return 'Groups Management'
     if (pathname.includes('/dashboard/admin/admin-projects')) return 'Admin Projects'
     if (pathname.includes('/dashboard/admin/projects')) return 'Projects Overview'
     if (pathname.includes('/dashboard/admin/phases')) return 'Phases Management'
     if (pathname.includes('/dashboard/admin/users')) return 'Users Management'
     if (pathname.includes('/dashboard/admin/leaderboard')) return 'Leaderboard'
     if (pathname.includes('/dashboard/admin')) return 'Admin Dashboard'
+    if (pathname.includes('/dashboard/student/leaderboard')) return 'Leaderboard'
     if (pathname.includes('/dashboard/student/submissions')) return 'Project Submissions'
     if (pathname.includes('/dashboard/student/project/register')) return 'Project Registration'
     if (pathname.includes('/dashboard/student')) return 'Student Dashboard'
+    if (pathname.includes('/dashboard/guide/leaderboard')) return 'Leaderboard'
     if (pathname.includes('/dashboard/guide/assigned')) return 'Assigned Projects'
     if (pathname.includes('/dashboard/guide/review')) return 'Review Submissions'
     if (pathname.includes('/dashboard/guide')) return 'Guide Dashboard'
@@ -123,30 +127,31 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Navigation Links based on role */}
-            <div className="hidden lg:flex items-center space-x-2">
-              {pathname.includes('/admin') && (
-                <>
-                  <Link 
-                    href="/dashboard/admin" 
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      pathname === '/dashboard/admin' 
-                        ? 'bg-indigo-100 text-indigo-700' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link 
-                    href="/dashboard/admin/admin-projects" 
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      pathname.includes('/admin-projects') 
-                        ? 'bg-indigo-100 text-indigo-700' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    Projects
-                  </Link>
+            {/* Navigation Links based on role - Hide on deep pages to reduce clutter */}
+            {!pathname.includes('/admin-projects/') && (
+              <div className="hidden lg:flex items-center space-x-2">
+                {pathname.includes('/admin') && (
+                  <>
+                    <Link 
+                      href="/dashboard/admin" 
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        pathname === '/dashboard/admin' 
+                          ? 'bg-indigo-100 text-indigo-700' 
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link 
+                      href="/dashboard/admin/admin-projects" 
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        pathname.includes('/admin-projects') 
+                          ? 'bg-indigo-100 text-indigo-700' 
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      Projects
+                    </Link>
                   <Link 
                     href="/dashboard/admin/phases" 
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -166,6 +171,16 @@ export default function Navbar() {
                     }`}
                   >
                     Users
+                  </Link>
+                  <Link 
+                    href="/dashboard/admin/leaderboard" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      pathname.includes('/leaderboard') 
+                        ? 'bg-indigo-100 text-indigo-700' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    Leaderboard
                   </Link>
                 </>
               )}
@@ -191,6 +206,16 @@ export default function Navbar() {
                     }`}
                   >
                     Submissions
+                  </Link>
+                  <Link 
+                    href="/dashboard/student/leaderboard" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      pathname.includes('/leaderboard') 
+                        ? 'bg-indigo-100 text-indigo-700' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    Leaderboard
                   </Link>
                 </>
               )}
@@ -227,9 +252,20 @@ export default function Navbar() {
                   >
                     Review
                   </Link>
+                  <Link 
+                    href="/dashboard/guide/leaderboard" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      pathname.includes('/leaderboard') 
+                        ? 'bg-indigo-100 text-indigo-700' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    Leaderboard
+                  </Link>
                 </>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Sign Out Button */}
             <button

@@ -1,0 +1,113 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.admin_projects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  department text NOT NULL,
+  year integer NOT NULL CHECK (year >= 1 AND year <= 4),
+  semester smallint NOT NULL CHECK (semester >= 1 AND semester <= 2),
+  created_by uuid NOT NULL,
+  max_students integer DEFAULT 1,
+  status text DEFAULT 'active'::text,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT admin_projects_pkey PRIMARY KEY (id),
+  CONSTRAINT admin_projects_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  title text NOT NULL,
+  message text,
+  is_read boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.phases (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  deadline timestamp without time zone NOT NULL,
+  max_marks real,
+  late_penalty_per_day real,
+  department text,
+  created_by uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  project_id uuid,
+  CONSTRAINT phases_pkey PRIMARY KEY (id),
+  CONSTRAINT phases_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT phases_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.admin_projects(id)
+);
+CREATE TABLE public.previous_topics (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  department text,
+  title text NOT NULL,
+  description text,
+  pdf_url text,
+  uploaded_by uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT previous_topics_pkey PRIMARY KEY (id),
+  CONSTRAINT previous_topics_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.projects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  student_id uuid,
+  guide_id uuid,
+  department text,
+  status USER-DEFINED DEFAULT 'pending'::project_status,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  admin_project_id uuid,
+  similarity_score integer,
+  project_name text,
+  CONSTRAINT projects_pkey PRIMARY KEY (id),
+  CONSTRAINT projects_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.users(id),
+  CONSTRAINT projects_guide_id_fkey FOREIGN KEY (guide_id) REFERENCES public.users(id),
+  CONSTRAINT projects_admin_project_id_fkey FOREIGN KEY (admin_project_id) REFERENCES public.admin_projects(id)
+);
+CREATE TABLE public.rubrics (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  phase_id uuid,
+  name text NOT NULL,
+  description text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT rubrics_pkey PRIMARY KEY (id),
+  CONSTRAINT rubrics_phase_id_fkey FOREIGN KEY (phase_id) REFERENCES public.phases(id)
+);
+CREATE TABLE public.submissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid,
+  project_id uuid,
+  phase_id uuid,
+  file_url text NOT NULL,
+  submission_date timestamp without time zone DEFAULT now(),
+  rubric_check_status USER-DEFINED DEFAULT 'pending'::rubric_check_status,
+  guide_status USER-DEFINED DEFAULT 'pending'::guide_status,
+  remarks text,
+  marks_awarded integer DEFAULT 0,
+  late_days integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now(),
+  similarity_score integer,
+  CONSTRAINT submissions_pkey PRIMARY KEY (id),
+  CONSTRAINT submissions_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.users(id),
+  CONSTRAINT submissions_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id),
+  CONSTRAINT submissions_phase_id_fkey FOREIGN KEY (phase_id) REFERENCES public.phases(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL,
+  name text NOT NULL,
+  email text NOT NULL UNIQUE,
+  role USER-DEFINED NOT NULL DEFAULT 'student'::user_role,
+  department text,
+  specialization text,
+  created_at timestamp without time zone DEFAULT now(),
+  year integer,
+  semester smallint,
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
